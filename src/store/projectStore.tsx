@@ -46,16 +46,57 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, isLoading: true, error: null, adapter }));
 
     try {
-      const { parseProject } = await import('@/parser/projectParser');
+      const [{ parseProject }, { readKeyFiles, createFingerprint }, { getParseCache, saveParseCache }] =
+        await Promise.all([
+          import('@/parser/projectParser'),
+          import('@/cache/fingerprint'),
+          import('@/cache/db'),
+        ]);
       if (controller.signal.aborted) return;
 
+      // Compute fingerprint from raw files to check cache.
+      const files = await readKeyFiles(adapter);
+      if (controller.signal.aborted) return;
+      const fingerprint = createFingerprint(files);
+
+      // Try cache first.
+      const cached = await getParseCache(fingerprint);
+      if (cached && !controller.signal.aborted) {
+        const parseResult = cached.parseResult as ParseResult;
+        const waves = (cached.waves as ParsedWave[]) ?? (parseResult.waves ?? []);
+
+        setState((prev) => {
+          const prevWave = prev.waves[prev.currentWaveIndex];
+          const matchedIndex = prevWave && !prevWave.isActive
+            ? waves.findIndex((w) => w.id === prevWave.id)
+            : -1;
+          const activeIndex = waves.findIndex((w) => w.isActive);
+          const currentWaveIndex =
+            matchedIndex >= 0 ? matchedIndex : activeIndex >= 0 ? activeIndex : waves.length > 0 ? 0 : -1;
+          const currentParseResult = currentWaveIndex >= 0 ? waves[currentWaveIndex].parseResult : parseResult;
+
+          return {
+            parseResult: currentParseResult,
+            waves,
+            currentWaveIndex,
+            isLoading: false,
+            error: null,
+            adapter,
+          };
+        });
+        return;
+      }
+
+      // Cache miss — parse fresh.
       const parseResult = await parseProject(adapter);
       if (controller.signal.aborted) return;
 
       const waves = parseResult.waves ?? [];
 
+      // Save to cache for next time.
+      await saveParseCache(fingerprint, parseResult, waves, -1);
+
       setState((prev) => {
-        // Preserve user's wave selection across reloads when possible.
         const prevWave = prev.waves[prev.currentWaveIndex];
         const matchedIndex = prevWave && !prevWave.isActive
           ? waves.findIndex((w) => w.id === prevWave.id)

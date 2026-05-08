@@ -2,8 +2,12 @@ import type { ReactFlowProps, Edge, Node } from '@xyflow/react';
 
 export interface DagNodeData {
   label: string;
+  labelCn: string;
+  labelEn: string;
   status: 'pending' | 'in-progress' | 'completed' | 'blocked';
   description?: string;
+  descriptionCn?: string;
+  descriptionEn?: string;
   wave: number;
   /** True if this node is on the critical path (longest dependency chain) */
   isCriticalPath?: boolean;

@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { MarkerType } from '@xyflow/react';
 
 import { AppShell, type ViewType } from '@/components/layout';
 import { DagCanvas } from '@/components/dag/DagCanvas';
@@ -82,9 +81,9 @@ function tasksToFlowData(tasks: ParsedTask[]): {
 
   const layoutTasks = tasks.map((t) => ({ id: t.id, dependencies: t.dependencies }));
   const positions = computeTopologicalLayout(layoutTasks, {
-    nodeWidth: 200,
+    nodeWidth: 260,
     nodeHeight: 104,
-    levelGap: 200,
+    levelGap: 240,
     siblingGap: 64,
   });
 
@@ -101,8 +100,13 @@ function tasksToFlowData(tasks: ParsedTask[]): {
       position: pos ? { x: pos.x, y: pos.y } : { x: 0, y: 0 },
       data: {
         label: task.title,
+        labelCn: task.titleCn,
+        labelEn: task.titleEn,
         status: task.status,
         description: task.acceptanceCriteria,
+        descriptionCn: task.acceptanceCriteriaCn,
+        descriptionEn: task.acceptanceCriteriaEn,
+        writeScope: task.writeScope,
         wave: task.wave,
         taskId: task.id,
         isCriticalPath: isCritical,
@@ -117,21 +121,15 @@ function tasksToFlowData(tasks: ParsedTask[]): {
       const edgeId = `${depId}-${task.id}`;
       const isCycle = cycleEdges.has(edgeId);
       const isCritical = criticalPath.edgeIds.has(edgeId);
-      const edgeStyle: React.CSSProperties = {};
-      if (isCycle) {
-        edgeStyle.strokeDasharray = '5,5';
-        edgeStyle.stroke = '#ef4444';
-      } else if (isCritical) {
-        edgeStyle.stroke = '#f59e0b';
-        edgeStyle.strokeWidth = 3;
-      }
       edges.push({
         id: edgeId,
         source: depId,
         target: task.id,
         type: 'dependencyEdge',
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: Object.keys(edgeStyle).length > 0 ? edgeStyle : undefined,
+        data: {
+          isCritical: isCritical || false,
+          isCycle: isCycle || false,
+        },
       });
     }
   }
@@ -383,13 +381,19 @@ function AppContent() {
           )}
         </div>
       )}
-      {state.isLoading ? (
-        <div className="h-full flex items-center justify-center text-muted-foreground">
-          <p className="text-sm">Loading project...</p>
+      <ErrorBoundary>
+        <div className="relative h-full">
+          {content}
+          {state.isLoading && (
+            <div className="absolute inset-0 z-40 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
+              <div className="flex items-center gap-2 text-muted-foreground bg-background border shadow-sm px-4 py-2 rounded-lg">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Refreshing...</span>
+              </div>
+            </div>
+          )}
         </div>
-      ) : (
-        <ErrorBoundary>{content}</ErrorBoundary>
-      )}
+      </ErrorBoundary>
     </AppShell>
   );
 }

@@ -1,8 +1,12 @@
 export interface ParsedTask {
   id: string;
   title: string;
+  titleCn: string;
+  titleEn: string;
   status: 'pending' | 'in-progress' | 'completed' | 'blocked';
   acceptanceCriteria: string;
+  acceptanceCriteriaCn: string;
+  acceptanceCriteriaEn: string;
   writeScope: string;
   dependencies: string[];
   wave: number;

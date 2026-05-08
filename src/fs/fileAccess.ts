@@ -1,3 +1,4 @@
+import { saveDirectoryHandle as dbSaveHandle, getDirectoryHandle as dbGetHandle } from '@/cache/db';
 import type { DirectoryEntry, FileSystemAdapter } from './directoryReader';
 
 declare global {
@@ -144,6 +145,32 @@ class FileSystemAccessAdapter implements FileSystemAdapter {
     await writable.write(content);
     await writable.close();
   }
+}
+
+/**
+ * Save the directory handle to IndexedDB for persistence across reloads.
+ */
+export async function saveDirectoryHandle(handle: FileSystemDirectoryHandle): Promise<void> {
+  await dbSaveHandle(handle);
+}
+
+/**
+ * Restore the previously saved directory handle from IndexedDB.
+ * Returns null if none was saved or if retrieval fails.
+ */
+export async function restoreDirectoryHandle(): Promise<FileSystemDirectoryHandle | null> {
+  return dbGetHandle();
+}
+
+/**
+ * Verify that a restored handle still has read permission.
+ * If not, request it. Returns false if permission is denied.
+ */
+export async function verifyPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
+  const opts = { mode: 'read' } as const;
+  const h = handle as any;
+  if ((await h.queryPermission(opts)) === 'granted') return true;
+  return (await h.requestPermission(opts)) === 'granted';
 }
 
 /**

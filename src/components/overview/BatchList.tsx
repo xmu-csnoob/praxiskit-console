@@ -1,4 +1,15 @@
-import { CheckCircle2, Circle, Clock, Shield, ShieldAlert, ClipboardCheck } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import {
+  CheckCircle2,
+  Circle,
+  Clock,
+  Shield,
+  ShieldAlert,
+  ClipboardCheck,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
+import { useLanguage } from '@/store';
 import type { ParsedBatch, ParsedTask } from '@/parser/types';
 
 interface BatchListProps {
@@ -58,6 +69,21 @@ function TaskStatusIcon({ status }: { status: string }) {
 }
 
 export function BatchList({ batches, tasks }: BatchListProps) {
+  const { lang } = useLanguage();
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggle = useCallback((id: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
   if (batches.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm">
@@ -66,49 +92,68 @@ export function BatchList({ batches, tasks }: BatchListProps) {
     );
   }
 
+  const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
-
   const sorted = [...batches].sort((a, b) => b.id - a.id);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {sorted.map((batch) => {
         const total = batch.tasks.length;
         const completed = batch.tasks.filter(
           (t) => taskStatusMap.get(t.id) === 'completed'
         ).length;
+        const isExpanded = expanded.has(batch.id);
 
         return (
           <div
             key={batch.id}
-            className="rounded-lg border bg-card p-4 hover:shadow-sm transition-shadow"
+            className="rounded-lg border bg-card overflow-hidden transition-shadow hover:shadow-sm"
           >
-            <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={() => toggle(batch.id)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              )}
               <h4 className="font-semibold text-sm">Batch {batch.id}</h4>
               <BatchStatusBadge
                 authorization={batch.authorization}
                 baselineStatus={batch.baselineStatus}
                 allCompleted={completed === total}
               />
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-              <span>{total} task{total !== 1 ? 's' : ''}</span>
-              <span>·</span>
-              <span>{completed} completed</span>
-            </div>
-            <div className="space-y-1">
-              {batch.tasks.slice(0, 4).map((task) => (
-                <div key={task.id} className="flex items-center gap-2 text-sm">
-                  <TaskStatusIcon status={taskStatusMap.get(task.id) ?? task.statusAtSelection} />
-                  <span className="truncate">{task.title}</span>
+              <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                {completed}/{total} done
+              </span>
+            </button>
+
+            {isExpanded && (
+              <div className="px-4 pb-3 pt-0">
+                <div className="border-t pt-2 space-y-1">
+                  {batch.tasks.slice(0, 6).map((btask) => {
+                    const fullTask = taskMap.get(btask.id);
+                    const displayTitle =
+                      lang === 'zh' && fullTask?.titleCn
+                        ? fullTask.titleCn
+                        : fullTask?.titleEn ?? btask.title;
+                    return (
+                      <div key={btask.id} className="flex items-center gap-2 text-sm">
+                        <TaskStatusIcon status={taskStatusMap.get(btask.id) ?? btask.statusAtSelection} />
+                        <span className="truncate">{displayTitle}</span>
+                      </div>
+                    );
+                  })}
+                  {batch.tasks.length > 6 && (
+                    <p className="text-xs text-muted-foreground pl-5.5">
+                      +{batch.tasks.length - 6} more tasks
+                    </p>
+                  )}
                 </div>
-              ))}
-              {batch.tasks.length > 4 && (
-                <p className="text-xs text-muted-foreground pl-5.5">
-                  +{batch.tasks.length - 4} more tasks
-                </p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         );
       })}
