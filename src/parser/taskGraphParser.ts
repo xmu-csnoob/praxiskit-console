@@ -1,5 +1,22 @@
 import type { ParsedTask, ParseError } from './types';
 
+function splitBilingual(text: string): { cn: string; en: string } {
+  // Use " / " as bilingual separator (pipe | is reserved for markdown tables)
+  const sep = ' / ';
+  const idx = text.indexOf(sep);
+  if (idx > 0) {
+    const left = text.slice(0, idx).trim();
+    const right = text.slice(idx + sep.length).trim();
+    // Heuristic: if left side has CJK chars, treat as CN; otherwise treat EN as first half
+    const hasCjk = /[一-鿿]/.test(left);
+    return hasCjk
+      ? { cn: left, en: right }
+      : { cn: right, en: left };
+  }
+  // No separator found: fallback — full text for both
+  return { cn: text, en: text };
+}
+
 function parseStatus(statusStr: string): ParsedTask['status'] {
   const s = statusStr.trim();
   if (s === '[x]') return 'completed';
@@ -85,13 +102,19 @@ export function parseTaskGraph(content: string, filename: string): { tasks: Pars
       continue;
     }
 
-    const [id, title, statusStr, acceptanceCriteria, writeScope, depsStr] = parts;
+    const [id, titleRaw, statusStr, acceptanceCriteriaRaw, writeScope, depsStr] = parts;
+    const titleParts = splitBilingual(titleRaw);
+    const acParts = splitBilingual(acceptanceCriteriaRaw);
 
     tasks.push({
       id,
-      title,
+      title: titleRaw,
+      titleCn: titleParts.cn,
+      titleEn: titleParts.en,
       status: parseStatus(statusStr),
-      acceptanceCriteria,
+      acceptanceCriteria: acceptanceCriteriaRaw,
+      acceptanceCriteriaCn: acParts.cn,
+      acceptanceCriteriaEn: acParts.en,
       writeScope,
       dependencies: parseDependencies(depsStr),
       wave: currentWave,

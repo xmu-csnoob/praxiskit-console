@@ -33,6 +33,34 @@
   }
 }
 
+/* DAG design tokens */
+:root {
+  --dag-node-bg: hsl(0 0% 100%);
+  --dag-node-border: hsl(0 0% 90%);
+  --dag-status-pending: hsl(215 14% 60%);
+  --dag-status-active: hsl(217 91% 60%);
+  --dag-status-done: hsl(142 71% 45%);
+  --dag-status-blocked: hsl(0 84% 60%);
+  --dag-critical: hsl(38 92% 50%);
+  --dag-cycle: hsl(0 84% 60%);
+  --dag-edge-default: hsl(215 20% 80%);
+  --dag-edge-strong: hsl(215 20% 55%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dag-node-bg: hsl(222 18% 12%);
+    --dag-node-border: hsl(222 18% 22%);
+    --dag-edge-default: hsl(215 15% 35%);
+  }
+}
+
+/* Critical path edge flow animation */
+@keyframes dag-flow {
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
+}
+
 /* Markdown Preview Styles */
 .md-preview {
   line-height: 1.6;
@@ -166,6 +194,29 @@
   header .text-sm.font-semibold {
     font-size: 0.8125rem;
   }
+}
+
+/* Line clamp utilities for Tailwind v4 */
+@utility line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Custom scrollbar for task node expanded content */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 80%);
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 70%);
 }
 
 /* Syntax Highlighting */
